@@ -44,8 +44,24 @@ export interface BankMeta {
   sources: SourceMeta[]
 }
 
-export interface QuestionBank {
-  meta: BankMeta
+export interface ManifestSource {
+  id: string
+  label: string
+  source: string
+  count: number
+  types: Record<string, number>
+  /** Path relative to /data/, e.g. chunks/Medkat.json */
+  chunk: string
+  questionIds: string[]
+}
+
+export interface BankManifest {
+  meta: Omit<BankMeta, 'sources'>
+  sources: ManifestSource[]
+}
+
+export interface ChunkPayload {
+  source: string
   questions: Question[]
 }
 

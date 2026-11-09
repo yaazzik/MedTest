@@ -2,6 +2,7 @@ import { startTransition, useEffect, useRef, useState } from 'react'
 import { Home } from './components/Home'
 import { Quiz } from './components/Quiz'
 import { useBank } from './hooks/useBank'
+import { loadQuestionsFor, poolIds as idsForSelection } from './lib/bankCache'
 import {
   clearProgress,
   emptyProgress,
@@ -9,8 +10,8 @@ import {
   markResult,
   saveProgress,
 } from './lib/progress'
-import { filterPool, nextFromQueue } from './lib/quiz'
-import type { ProgressMap, Screen } from './types'
+import { nextFromQueue } from './lib/quiz'
+import type { ProgressMap, Question, Screen } from './types'
 
 export default function App() {
   const bankState = useBank()
@@ -20,6 +21,9 @@ export default function App() {
   const [queue, setQueue] = useState<string[]>([])
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [starting, setStarting] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const lastSeenId = useRef<string | null>(null)
 
   useEffect(() => {
@@ -55,7 +59,7 @@ export default function App() {
       <div className="app-shell">
         <div className="loading">
           <h1>MedTest</h1>
-          <p>Загружаем банк вопросов…</p>
+          <p>Загружаем каталог…</p>
         </div>
       </div>
     )
@@ -72,9 +76,9 @@ export default function App() {
     )
   }
 
-  const { bank } = bankState
-  const pool = filterPool(bank.questions, selected)
-  const byId = new Map(bank.questions.map((q) => [q.id, q]))
+  const { manifest } = bankState
+  const poolIdList = idsForSelection(manifest, selected)
+  const byId = new Map(questions.map((q) => [q.id, q]))
   const current = currentId ? byId.get(currentId) : undefined
 
   function toggleSource(source: string) {
@@ -93,16 +97,26 @@ export default function App() {
     startTransition(() => setSelected('all'))
   }
 
-  function startQuiz() {
-    const ids = pool.map((q) => q.id)
-    const draw = nextFromQueue(ids, [], null)
-    setQueue(draw.queue)
-    setCurrentId(draw.nextId)
-    setScreen('quiz')
+  async function startQuiz() {
+    setLoadError(null)
+    setStarting(true)
+    try {
+      const loaded = await loadQuestionsFor(manifest, selected)
+      const ids = loaded.map((q) => q.id)
+      const draw = nextFromQueue(ids, [], null)
+      setQuestions(loaded)
+      setQueue(draw.queue)
+      setCurrentId(draw.nextId)
+      setScreen('quiz')
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки вопросов')
+    } finally {
+      setStarting(false)
+    }
   }
 
   function goNext() {
-    const ids = pool.map((q) => q.id)
+    const ids = questions.map((q) => q.id)
     const draw = nextFromQueue(ids, queue, currentId)
     setQueue(draw.queue)
     setCurrentId(draw.nextId)
@@ -117,23 +131,31 @@ export default function App() {
   return (
     <div className="app-shell">
       {screen === 'home' && (
-        <Home
-          bank={bank}
-          questions={pool}
-          selected={selected}
-          progress={progress}
-          onToggleSource={toggleSource}
-          onSelectAll={selectAll}
-          onStart={startQuiz}
-          onReset={resetProgress}
-        />
+        <>
+          <Home
+            manifest={manifest}
+            poolIds={poolIdList}
+            selected={selected}
+            progress={progress}
+            starting={starting}
+            onToggleSource={toggleSource}
+            onSelectAll={selectAll}
+            onStart={() => void startQuiz()}
+            onReset={resetProgress}
+          />
+          {loadError && (
+            <p className="footer-note" role="alert" style={{ color: 'var(--danger, #b00020)' }}>
+              {loadError}
+            </p>
+          )}
+        </>
       )}
 
       {screen === 'quiz' && current && (
         <Quiz
           key={current.id}
           question={current}
-          indexHint={`${pool.length} в пуле`}
+          indexHint={`${questions.length} в пуле`}
           onBack={() => setScreen('home')}
           onNext={goNext}
           onGraded={(correct) =>

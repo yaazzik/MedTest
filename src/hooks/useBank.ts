@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import type { QuestionBank } from '../types'
+import type { BankManifest } from '../types'
 
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; bank: QuestionBank }
+  | { status: 'ready'; manifest: BankManifest }
 
+/** First paint: tiny manifest only. Question chunks load on demand. */
 export function useBank(): State {
   const [state, setState] = useState<State>({ status: 'loading' })
 
@@ -13,10 +14,10 @@ export function useBank(): State {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/data/bank.json')
-        if (!res.ok) throw new Error(`Не удалось загрузить банк (${res.status})`)
-        const bank = (await res.json()) as QuestionBank
-        if (!cancelled) setState({ status: 'ready', bank })
+        const res = await fetch('/data/manifest.json')
+        if (!res.ok) throw new Error(`Не удалось загрузить манифест (${res.status})`)
+        const manifest = (await res.json()) as BankManifest
+        if (!cancelled) setState({ status: 'ready', manifest })
       } catch (err) {
         if (!cancelled) {
           setState({

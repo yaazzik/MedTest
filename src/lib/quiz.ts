@@ -4,14 +4,6 @@ export function sourceKey(q: Question): string {
   return q.source
 }
 
-export function filterPool(
-  questions: Question[],
-  selectedSources: Set<string> | 'all',
-): Question[] {
-  if (selectedSources === 'all') return questions
-  return questions.filter((q) => selectedSources.has(q.source))
-}
-
 /** Fisher–Yates shuffle copy */
 export function shuffle<T>(items: T[]): T[] {
   const arr = [...items]

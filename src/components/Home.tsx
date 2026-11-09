@@ -1,12 +1,13 @@
-import type { ProgressMap, Question, QuestionBank } from '../types'
+import type { BankManifest, ProgressMap } from '../types'
 import { displaySourceLabel } from '../lib/quiz'
 import { poolStats } from '../lib/progress'
 
 interface Props {
-  bank: QuestionBank
-  questions: Question[]
+  manifest: BankManifest
+  poolIds: string[]
   selected: Set<string> | 'all'
   progress: ProgressMap
+  starting?: boolean
   onToggleSource: (source: string) => void
   onSelectAll: () => void
   onStart: () => void
@@ -14,19 +15,18 @@ interface Props {
 }
 
 export function Home({
-  bank,
-  questions,
+  manifest,
+  poolIds,
   selected,
   progress,
+  starting = false,
   onToggleSource,
   onSelectAll,
   onStart,
   onReset,
 }: Props) {
-  const ids = questions.map((q) => q.id)
-  const stats = poolStats(ids, progress)
+  const stats = poolStats(poolIds, progress)
   const pct = stats.total ? Math.round((stats.seen / stats.total) * 100) : 0
-  const uniqueSources = [...new Set(bank.questions.map((q) => q.source))]
 
   return (
     <div className="screen-enter">
@@ -36,8 +36,13 @@ export function Home({
           Случайные вопросы из банка МК — тренировка с локальным прогрессом.
         </p>
         <div className="cta-row">
-          <button type="button" className="btn btn-primary" onClick={onStart} disabled={stats.total === 0}>
-            Начать практику
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onStart}
+            disabled={stats.total === 0 || starting}
+          >
+            {starting ? 'Загрузка…' : 'Начать практику'}
           </button>
           <button type="button" className="btn btn-secondary" onClick={onReset}>
             Сбросить прогресс
@@ -68,7 +73,7 @@ export function Home({
           <div className="progress-fill" style={{ transform: `scaleX(${pct / 100 || 0.02})` }} />
         </div>
         <p className="section-note" style={{ marginTop: 10 }}>
-          В пуле {stats.total} вопросов · банк всего {bank.meta.total}
+          В пуле {stats.total} вопросов · банк всего {manifest.meta.total}
         </p>
       </section>
 
@@ -84,23 +89,22 @@ export function Home({
             <span className="source-check" aria-hidden />
             <span className="source-text">
               <strong>Все источники</strong>
-              <span>{bank.meta.total} вопросов</span>
+              <span>{manifest.meta.total} вопросов</span>
             </span>
           </button>
-          {uniqueSources.map((src) => {
-            const count = bank.questions.filter((q) => q.source === src).length
-            const on = selected !== 'all' && selected.has(src)
+          {manifest.sources.map((src) => {
+            const on = selected !== 'all' && selected.has(src.source)
             return (
               <button
-                key={src}
+                key={src.source}
                 type="button"
                 className={`source-item ${on ? 'is-on' : ''}`}
-                onClick={() => onToggleSource(src)}
+                onClick={() => onToggleSource(src.source)}
               >
                 <span className="source-check" aria-hidden />
                 <span className="source-text">
-                  <strong>{displaySourceLabel(src)}</strong>
-                  <span>{count} вопросов</span>
+                  <strong>{displaySourceLabel(src.source)}</strong>
+                  <span>{src.count} вопросов</span>
                 </span>
               </button>
             )

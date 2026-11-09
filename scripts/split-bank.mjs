@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Transform public/data/bank.json into:
+ * Transform data/bank.json into:
  *   - public/data/manifest.json (tiny index + question ids)
  *   - public/data/chunks/<slug>.json (questions per source)
  *
@@ -10,7 +10,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
-const BANK_PATH = path.join(ROOT, 'public/data/bank.json')
+const BANK_PATH = path.join(ROOT, 'data/bank.json')
 const CHUNKS_DIR = path.join(ROOT, 'public/data/chunks')
 const MANIFEST_PATH = path.join(ROOT, 'public/data/manifest.json')
 
