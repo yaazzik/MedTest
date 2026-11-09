@@ -29,3 +29,13 @@ npm run split-bank
 npm run build
 npm run preview
 ```
+
+`base` в Vite — `/MedTest/` (project Pages). Локальный preview: `http://127.0.0.1:4173/MedTest/`.
+
+## GitHub Pages
+
+Пуш в `main` запускает workflow **Deploy GitHub Pages** (build → `actions/deploy-pages`).
+
+Живой URL: https://yaazzik.github.io/MedTest/
+
+Хостинг apps.grok.bot при этом не трогается — это дополнительный канал.
