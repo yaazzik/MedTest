@@ -8,9 +8,17 @@ interface Props {
   onBack: () => void
   onNext: () => void
   onGraded: (correct: boolean) => void
+  onMarkBroken: () => void
 }
 
-export function Quiz({ question: raw, indexHint, onBack, onNext, onGraded }: Props) {
+export function Quiz({
+  question: raw,
+  indexHint,
+  onBack,
+  onNext,
+  onGraded,
+  onMarkBroken,
+}: Props) {
   const question = displayQuestion(raw)
   const [selected, setSelected] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -166,6 +174,14 @@ export function Quiz({ question: raw, indexHint, onBack, onNext, onGraded }: Pro
               Следующий вопрос
             </button>
           )}
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onMarkBroken}
+            title="Скрыть этот вопрос из пула на этом устройстве"
+          >
+            Не показывать
+          </button>
         </div>
       </article>
     </div>

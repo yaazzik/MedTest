@@ -4,6 +4,14 @@ import { Quiz } from './components/Quiz'
 import { useBank } from './hooks/useBank'
 import { loadQuestionsFor, poolIds as idsForSelection } from './lib/bankCache'
 import {
+  clearBroken,
+  excludeBroken,
+  loadBroken,
+  markBroken,
+  saveBroken,
+  type BrokenSet,
+} from './lib/broken'
+import {
   clearProgress,
   emptyProgress,
   loadProgress,
@@ -18,6 +26,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [selected, setSelected] = useState<Set<string> | 'all'>('all')
   const [progress, setProgress] = useState<ProgressMap>({})
+  const [broken, setBroken] = useState<BrokenSet>(() => new Set())
   const [queue, setQueue] = useState<string[]>([])
   const [currentId, setCurrentId] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -28,6 +37,7 @@ export default function App() {
 
   useEffect(() => {
     setProgress(loadProgress())
+    setBroken(loadBroken())
     setReady(true)
   }, [])
 
@@ -35,6 +45,11 @@ export default function App() {
     if (!ready) return
     saveProgress(progress)
   }, [progress, ready])
+
+  useEffect(() => {
+    if (!ready) return
+    saveBroken(broken)
+  }, [broken, ready])
 
   // Count as seen when a question is shown in quiz (once per currentId)
   useEffect(() => {
@@ -77,8 +92,9 @@ export default function App() {
   }
 
   const { manifest } = bankState
-  const poolIdList = idsForSelection(manifest, selected)
-  const byId = new Map(questions.map((q) => [q.id, q]))
+  const poolIdList = excludeBroken(idsForSelection(manifest, selected), broken)
+  const activeQuestions = questions.filter((q) => !broken.has(q.id))
+  const byId = new Map(activeQuestions.map((q) => [q.id, q]))
   const current = currentId ? byId.get(currentId) : undefined
 
   function toggleSource(source: string) {
@@ -102,9 +118,10 @@ export default function App() {
     setStarting(true)
     try {
       const loaded = await loadQuestionsFor(manifest, selected)
-      const ids = loaded.map((q) => q.id)
+      const usable = loaded.filter((q) => !broken.has(q.id))
+      const ids = usable.map((q) => q.id)
       const draw = nextFromQueue(ids, [], null)
-      setQuestions(loaded)
+      setQuestions(usable)
       setQueue(draw.queue)
       setCurrentId(draw.nextId)
       setScreen('quiz')
@@ -115,17 +132,45 @@ export default function App() {
     }
   }
 
-  function goNext() {
-    const ids = questions.map((q) => q.id)
-    const draw = nextFromQueue(ids, queue, currentId)
+  function advance(pool: string[], fromId: string | null, q: string[]) {
+    const draw = nextFromQueue(
+      pool,
+      q.filter((id) => pool.includes(id)),
+      fromId,
+    )
     setQueue(draw.queue)
     setCurrentId(draw.nextId)
+  }
+
+  function goNext() {
+    const pool = questions.map((q) => q.id).filter((id) => !broken.has(id))
+    advance(pool, currentId, queue)
+  }
+
+  function handleMarkBroken() {
+    if (!currentId) return
+    const next = markBroken(broken, currentId)
+    setBroken(next)
+    const remaining = questions.filter((q) => q.id !== currentId)
+    setQuestions(remaining)
+    advance(
+      remaining.map((q) => q.id),
+      currentId,
+      queue,
+    )
   }
 
   function resetProgress() {
     if (!window.confirm('Сбросить весь локальный прогресс?')) return
     clearProgress()
     setProgress({})
+  }
+
+  function handleClearBroken() {
+    if (broken.size === 0) return
+    if (!window.confirm(`Вернуть ${broken.size} скрытых вопросов в пул?`)) return
+    clearBroken()
+    setBroken(new Set())
   }
 
   return (
@@ -137,11 +182,13 @@ export default function App() {
             poolIds={poolIdList}
             selected={selected}
             progress={progress}
+            brokenCount={broken.size}
             starting={starting}
             onToggleSource={toggleSource}
             onSelectAll={selectAll}
             onStart={() => void startQuiz()}
             onReset={resetProgress}
+            onClearBroken={handleClearBroken}
           />
           {loadError && (
             <p className="footer-note" role="alert" style={{ color: 'var(--danger, #b00020)' }}>
@@ -155,9 +202,10 @@ export default function App() {
         <Quiz
           key={current.id}
           question={current}
-          indexHint={`${questions.length} в пуле`}
+          indexHint={`${activeQuestions.length} в пуле`}
           onBack={() => setScreen('home')}
-          onNext={goNext}
+          onNext={() => goNext()}
+          onMarkBroken={handleMarkBroken}
           onGraded={(correct) =>
             setProgress((p) => markResult(p, current.id, correct))
           }

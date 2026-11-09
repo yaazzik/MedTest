@@ -7,11 +7,13 @@ interface Props {
   poolIds: string[]
   selected: Set<string> | 'all'
   progress: ProgressMap
+  brokenCount: number
   starting?: boolean
   onToggleSource: (source: string) => void
   onSelectAll: () => void
   onStart: () => void
   onReset: () => void
+  onClearBroken: () => void
 }
 
 export function Home({
@@ -19,11 +21,13 @@ export function Home({
   poolIds,
   selected,
   progress,
+  brokenCount,
   starting = false,
   onToggleSource,
   onSelectAll,
   onStart,
   onReset,
+  onClearBroken,
 }: Props) {
   const stats = poolStats(poolIds, progress)
   const pct = stats.total ? Math.round((stats.seen / stats.total) * 100) : 0
@@ -77,6 +81,24 @@ export function Home({
         </p>
       </section>
 
+      <section className="section" aria-label="Скрытые вопросы">
+        <h2 className="section-title">Скрытые</h2>
+        <p className="section-note">
+          Вопросы, помеченные «Не показывать», исключены из пула на этом
+          устройстве (отдельно от прогресса).
+        </p>
+        <p className="section-note" style={{ marginTop: 8 }}>
+          Скрыто: <strong>{brokenCount}</strong>
+        </p>
+        {brokenCount > 0 && (
+          <div className="cta-row" style={{ marginTop: 12 }}>
+            <button type="button" className="btn btn-secondary" onClick={onClearBroken}>
+              Вернуть скрытые в пул
+            </button>
+          </div>
+        )}
+      </section>
+
       <section className="section" aria-label="Источники">
         <h2 className="section-title">Источники</h2>
         <p className="section-note">Выберите один или несколько банков, либо все.</p>
@@ -114,8 +136,8 @@ export function Home({
 
       <p className="footer-note">
         MCQ с известным ответом проверяются автоматически. Открытые вопросы и
-        MCQ без ключа — самопроверка («знал / не знал»). Прогресс хранится только
-        на этом устройстве.
+        MCQ без ключа — самопроверка («знал / не знал»). Прогресс и скрытые
+        вопросы хранятся только на этом устройстве.
       </p>
     </div>
   )
