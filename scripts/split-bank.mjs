@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
  * Transform data/bank.json into:
+ *   - data/bank.json (normalized in place)
  *   - public/data/manifest.json (tiny index + question ids)
  *   - public/data/chunks/<slug>.json (questions per source)
  *
- * Does not invent questions — only partitions the existing bank.
+ * Does not invent questions — only partitions / reshapes the existing bank.
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { normalizeBank } from './lib/normalizeBank.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 const BANK_PATH = path.join(ROOT, 'data/bank.json')
@@ -18,7 +20,9 @@ function slugFromSource(source) {
   return source.replace(/\.(pdf|docx)$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '_')
 }
 
-const bank = JSON.parse(fs.readFileSync(BANK_PATH, 'utf8'))
+const raw = JSON.parse(fs.readFileSync(BANK_PATH, 'utf8'))
+const { bank, converted } = normalizeBank(raw)
+fs.writeFileSync(BANK_PATH, JSON.stringify(bank))
 fs.mkdirSync(CHUNKS_DIR, { recursive: true })
 
 const bySource = new Map()
@@ -67,7 +71,17 @@ if (!parity) {
   process.exit(1)
 }
 
+const leftoverSingle = bank.questions.filter(
+  (q) => q.type === 'multiple_choice' && (q.options ?? []).length === 1,
+).length
+if (leftoverSingle > 0) {
+  console.error(`ERROR: ${leftoverSingle} single-option MCQ remain`)
+  process.exit(1)
+}
+
 console.log(
   `\nmanifest.json ${(fs.statSync(MANIFEST_PATH).size / 1024).toFixed(1)} KB`,
 )
-console.log(`sources ${sources.length} · ids ${chunkIds.size} · parity ok`)
+console.log(
+  `sources ${sources.length} · ids ${chunkIds.size} · converted ${converted} single-option MCQ→open · parity ok`,
+)

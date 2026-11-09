@@ -41,9 +41,24 @@ export function nextFromQueue(
 export function isGradableMcq(q: Question): boolean {
   if (q.type !== 'multiple_choice') return false
   const opts = q.options ?? []
-  if (opts.length === 0) return false
+  // Single-option items are answer keys, not real MCQ (pipeline converts them to open).
+  if (opts.length < 2) return false
   if (q.correctUnknown) return false
   return opts.some((o) => o.correct === true)
+}
+
+/** Runtime guard: one-option "MCQ" must render as open self-check. */
+export function displayQuestion(q: Question): Question {
+  if (q.type !== 'multiple_choice') return q
+  const opts = q.options ?? []
+  if (opts.length !== 1) return q
+  const { options: _options, correctUnknown: _unknown, ...rest } = q
+  return {
+    ...rest,
+    type: 'open',
+    answer: opts[0]?.text ?? q.answer ?? '',
+    mode: 'self_check',
+  }
 }
 
 export function displaySourceLabel(source: string): string {

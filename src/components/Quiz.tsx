@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Question } from '../types'
-import { displaySourceLabel, isGradableMcq } from '../lib/quiz'
+import { displayQuestion, displaySourceLabel, isGradableMcq } from '../lib/quiz'
 
 interface Props {
   question: Question
@@ -10,7 +10,8 @@ interface Props {
   onGraded: (correct: boolean) => void
 }
 
-export function Quiz({ question, indexHint, onBack, onNext, onGraded }: Props) {
+export function Quiz({ question: raw, indexHint, onBack, onNext, onGraded }: Props) {
+  const question = displayQuestion(raw)
   const [selected, setSelected] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [draft, setDraft] = useState('')
