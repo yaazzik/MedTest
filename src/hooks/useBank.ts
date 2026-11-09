@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { DATA_ROOT } from '../lib/dataRoot'
 import type { BankManifest } from '../types'
 
 type State =
@@ -14,7 +15,7 @@ export function useBank(): State {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch('/data/manifest.json')
+        const res = await fetch(`${DATA_ROOT}/manifest.json`)
         if (!res.ok) throw new Error(`Не удалось загрузить манифест (${res.status})`)
         const manifest = (await res.json()) as BankManifest
         if (!cancelled) setState({ status: 'ready', manifest })

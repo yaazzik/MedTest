@@ -1,6 +1,6 @@
 import type { BankManifest, ChunkPayload, ManifestSource, Question } from '../types'
+import { DATA_ROOT } from './dataRoot'
 
-const DATA_ROOT = '/data'
 
 const chunkCache = new Map<string, Question[]>()
 const inflight = new Map<string, Promise<Question[]>>()
