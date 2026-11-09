@@ -38,4 +38,13 @@ npm run preview
 
 Живой URL: https://yaazzik.github.io/MedTest/
 
+### Первый раз: включить Pages вручную
+
+Токен агента не может вызвать Pages API (`403 Resource not accessible by integration`). Один раз в UI:
+
+1. Откройте https://github.com/yaazzik/MedTest/settings/pages
+2. **Build and deployment** → **Source** → **GitHub Actions**
+3. Сохраните / оставьте выбранным GitHub Actions
+4. При необходимости перезапустите workflow: Actions → **Deploy GitHub Pages** → **Run workflow**
+
 Хостинг apps.grok.bot при этом не трогается — это дополнительный канал.
